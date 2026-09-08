@@ -164,7 +164,7 @@
         }
         .weather-grid .label { opacity: 0.7; }
 
-        /* 未來6天預報 */
+        /* 未來5天預報 */
         .forecast-days {
             margin-top: 12px;
             padding-top: 10px;
@@ -544,7 +544,7 @@
         }
         setInterval(nextPhoto, PHOTO_INTERVAL);
 
-        // 天氣：未來6天預報
+        // 天氣：未來5天預報
         async function fetchWeather() {
             try {
                 const res = await fetch(WEATHER_API, { cache: 'no-store' });
@@ -565,9 +565,9 @@
                 document.getElementById('uv').textContent = Math.round(curr.uv_index);
                 document.getElementById('feels').textContent = Math.round(curr.apparent_temperature) + '°';
 
-                // 未來6天預報：今日、明日 + 其後4天星期
+                // 未來5天預報：今日、明日 + 其後3天星期
                 let forecastHtml = '';
-                for (let i = 0; i < 6; i++) {
+                for (let i = 0; i < 5; i++) {
                     const icon = getWeatherIcon(daily.weather_code[i]);
                     const low = Math.round(daily.temperature_2m_min[i]);
                     const high = Math.round(daily.temperature_2m_max[i]);
