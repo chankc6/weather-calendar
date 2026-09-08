@@ -1,0 +1,660 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <!-- 每15分鐘自動刷新整個頁面（900秒） -->
+    <meta http-equiv="refresh" content="900">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="mobile-web-app-capable" content="yes">
+    <title>澳門天氣桌面日曆</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+            font-family: "PingFang TC", "Microsoft JhengHei", system-ui, sans-serif;
+        }
+
+        html, body {
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+            background: #000;
+            color: #fff;
+            cursor: none;
+            user-select: none;
+            transition: filter 1s ease;
+        }
+
+        body.night-mode {
+            filter: brightness(0.65) contrast(1.05);
+        }
+
+        .photo-stage {
+            position: fixed;
+            inset: 0;
+            z-index: 0;
+        }
+        .photo {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            opacity: 0;
+            transition: opacity 1.5s ease-in-out;
+        }
+        .photo.active {
+            opacity: 1;
+        }
+
+        .overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 1;
+            background: rgba(0,0,0,0.2);
+            transition: background 1s ease;
+            pointer-events: none;
+        }
+        body.night-mode .overlay {
+            background: rgba(0,0,0,0.4);
+        }
+
+        .main-container {
+            position: relative;
+            z-index: 2;
+            width: 100%;
+            height: 100%;
+            transition: opacity 0.4s ease;
+        }
+        .main-container.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .time-layer {
+            position: absolute;
+            left: 40px;
+            bottom: 36px;
+            text-shadow: 0 2px 12px rgba(0,0,0,0.7);
+        }
+        .time-big {
+            font-size: 86px;
+            font-weight: 300;
+            letter-spacing: 4px;
+            line-height: 1;
+        }
+        .date-row {
+            font-size: 22px;
+            margin-top: 6px;
+            opacity: 0.95;
+        }
+        .lunar-row {
+            font-size: 16px;
+            margin-top: 4px;
+            opacity: 0.8;
+        }
+
+        .side-panel {
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 360px;
+            height: 100vh;
+            padding: 24px 20px 28px;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            background: linear-gradient(to left, rgba(0,0,0,0.4), rgba(0,0,0,0.15));
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            overflow-y: auto;
+            overflow-x: hidden;
+            scrollbar-width: none;
+        }
+        .side-panel::-webkit-scrollbar { display: none; }
+
+        .panel-card {
+            background: rgba(0,0,0,0.35);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+            border-radius: 14px;
+            padding: 14px 16px;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .panel-title {
+            font-size: 13px;
+            opacity: 0.8;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .weather-top {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            margin-bottom: 12px;
+        }
+        .weather-icon-big {
+            font-size: 48px;
+        }
+        .weather-temp {
+            font-size: 38px;
+            font-weight: 300;
+            line-height: 1;
+        }
+        .weather-desc {
+            font-size: 13px;
+            opacity: 0.9;
+            margin-top: 4px;
+        }
+        .weather-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 6px 12px;
+            font-size: 12px;
+        }
+        .weather-grid .item {
+            display: flex;
+            justify-content: space-between;
+        }
+        .weather-grid .label { opacity: 0.7; }
+
+        /* 未來6天預報 */
+        .forecast-days {
+            margin-top: 12px;
+            padding-top: 10px;
+            border-top: 1px solid rgba(255,255,255,0.1);
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        .forecast-day {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 12px;
+        }
+        .forecast-day .day-name {
+            width: 44px;
+            opacity: 0.9;
+        }
+        .forecast-day .day-icon {
+            font-size: 16px;
+            width: 24px;
+            text-align: center;
+        }
+        .forecast-day .day-temp {
+            flex: 1;
+            text-align: right;
+            opacity: 0.85;
+        }
+
+        .countdown-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 5px 0;
+            font-size: 13px;
+        }
+        .countdown-days {
+            font-weight: 600;
+            color: #ffd166;
+        }
+
+        /* 月曆（整合更表） */
+        .calendar-card {
+            background: rgba(0,0,0,0.35);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+            border-radius: 16px;
+            padding: 16px 18px;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        .cal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            font-size: 14px;
+            font-weight: 500;
+        }
+        .cal-weekdays {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            text-align: center;
+            font-size: 11px;
+            opacity: 0.7;
+            margin-bottom: 6px;
+        }
+        .cal-days {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 3px;
+            text-align: center;
+            font-size: 12px;
+        }
+        .cal-day {
+            padding: 4px 2px;
+            border-radius: 7px;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            line-height: 1.2;
+        }
+        .cal-day.today {
+            background: #ffd166;
+            color: #333;
+            font-weight: 600;
+        }
+        .cal-day.other-month {
+            opacity: 0.3;
+        }
+        .shift-label {
+            font-size: 9px;
+            font-weight: 500;
+            line-height: 1.1;
+        }
+        .shift-morning { color: #ffd166; }
+        .shift-night { color: #c4b5fd; }
+        .shift-rest { color: #ff8080; }
+        .cal-day.today .shift-morning,
+        .cal-day.today .shift-night,
+        .cal-day.today .shift-rest {
+            color: #333;
+        }
+
+        .chime-flash {
+            position: fixed;
+            inset: 0;
+            background: rgba(255,255,255,0.12);
+            z-index: 99;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        .chime-flash.active {
+            opacity: 1;
+        }
+
+        .burn-in-protect {
+            transition: transform 10s linear;
+        }
+
+        @media (max-width: 1300px) and (min-width: 800px) {
+            .time-big { font-size: 76px; }
+            .date-row { font-size: 20px; }
+            .side-panel { width: 340px; padding: 20px 18px; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="photo-stage" id="photoStage"></div>
+    <div class="overlay"></div>
+    <div class="chime-flash" id="chimeFlash"></div>
+
+    <div class="main-container burn-in-protect" id="mainContainer">
+        <div class="time-layer">
+            <div class="time-big" id="clockTime">00:00</div>
+            <div class="date-row" id="clockDate">2026年09月08日 星期二</div>
+            <div class="lunar-row" id="clockLunar">丙午馬年 七月廿七日</div>
+        </div>
+
+        <div class="side-panel">
+            <!-- 天氣 -->
+            <div class="panel-card" id="weatherCard">
+                <div class="panel-title">
+                    <span>🌤️ 澳門天氣</span>
+                    <span id="weatherUpdate" style="font-size:11px;opacity:0.6">更新中</span>
+                </div>
+                <div class="weather-top">
+                    <div class="weather-icon-big" id="weatherIcon">⛅</div>
+                    <div>
+                        <div class="weather-temp" id="weatherTemp">--°</div>
+                        <div class="weather-desc" id="weatherDesc">載入中...</div>
+                    </div>
+                </div>
+                <div class="weather-grid">
+                    <div class="item"><span class="label">最高</span><span id="tempHigh">--°</span></div>
+                    <div class="item"><span class="label">最低</span><span id="tempLow">--°</span></div>
+                    <div class="item"><span class="label">濕度</span><span id="humidity">--%</span></div>
+                    <div class="item"><span class="label">風速</span><span id="wind">-- km/h</span></div>
+                    <div class="item"><span class="label">紫外線</span><span id="uv">--</span></div>
+                    <div class="item"><span class="label">體感</span><span id="feels">--°</span></div>
+                </div>
+                <div class="forecast-days" id="forecastDays"></div>
+            </div>
+
+            <!-- 倒數提醒：最近三個節日 -->
+            <div class="panel-card">
+                <div class="panel-title">📅 倒數提醒</div>
+                <div id="countdownList"></div>
+            </div>
+
+            <!-- 月曆（內嵌更表） -->
+            <div class="calendar-card">
+                <div class="cal-header">
+                    <span id="calMonth">2026年9月</span>
+                    <span style="font-size:11px;opacity:0.7">今日高亮</span>
+                </div>
+                <div class="cal-weekdays">
+                    <span>日</span><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span>
+                </div>
+                <div class="cal-days" id="calDays"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const MACAU_LAT = 22.1987;
+        const MACAU_LON = 113.5439;
+        const WEATHER_API = `https://api.open-meteo.com/v1/forecast?latitude=${MACAU_LAT}&longitude=${MACAU_LON}&current=temperature_2m,relative_humidity_2m,apparent_temperature,wind_speed_10m,uv_index,weather_code&daily=temperature_2m_max,temperature_2m_min,weather_code&timezone=Asia%2FMacau&forecast_days=7`;
+
+        const PHOTOS = [
+            "https://i.postimg.cc/FYGz2Pm6/pic1.jpg",
+            "https://i.postimg.cc/18MXLWP7/pic2.jpg",
+            "https://i.postimg.cc/3k9NPL7t/pic3.jpg",
+            "https://i.postimg.cc/hXMvHCgp/pic4.jpg",
+            "https://i.postimg.cc/fVMkq44C/pic5.jpg",
+            "https://i.postimg.cc/ZWJ0skkx/pic6.jpg",
+            "https://i.postimg.cc/cvd6kqqm/pic7.jpg",
+            "https://i.postimg.cc/MnzX3kkt/pic8.jpg"
+        ];
+        const PHOTO_INTERVAL = 15000;
+
+        const HOLIDAYS = [
+            { date: '2026-09-26', name: '中秋節翌日' },
+            { date: '2026-10-01', name: '國慶日' },
+            { date: '2026-10-02', name: '國慶日翌日' },
+            { date: '2026-10-18', name: '重陽節' },
+            { date: '2026-12-20', name: '澳門回歸日' },
+            { date: '2026-12-22', name: '冬至' },
+            { date: '2026-12-25', name: '聖誕節' },
+            { date: '2027-01-01', name: '元旦' }
+        ];
+
+        // 9月完整更表
+        const SCHEDULE = {
+            '09-01': { type: 'rest', label: 'Off' },
+            '09-02': { type: 'morning', label: '早更' },
+            '09-03': { type: 'night', label: '夜更' },
+            '09-04': { type: 'rest', label: 'Off' },
+            '09-05': { type: 'morning', label: '早更' },
+            '09-06': { type: 'night', label: '夜更' },
+            '09-07': { type: 'rest', label: 'Off' },
+            '09-08': { type: 'morning', label: '早更' },
+            '09-09': { type: 'night', label: '夜更' },
+            '09-10': { type: 'night', label: '夜更' },
+            '09-11': { type: 'night', label: '夜更' },
+            '09-12': { type: 'rest', label: 'Off' },
+            '09-13': { type: 'morning', label: '早更' },
+            '09-14': { type: 'morning', label: '早更' },
+            '09-15': { type: 'morning', label: '早更' },
+            '09-16': { type: 'rest', label: 'Off' },
+            '09-17': { type: 'morning', label: '早更' },
+            '09-18': { type: 'night', label: '夜更' },
+            '09-19': { type: 'night', label: '夜更' },
+            '09-20': { type: 'rest', label: 'Off' },
+            '09-21': { type: 'night', label: '夜更' },
+            '09-22': { type: 'night', label: '夜更' },
+            '09-23': { type: 'night', label: '夜更' },
+            '09-24': { type: 'night', label: '夜更' },
+            '09-25': { type: 'rest', label: 'Off' },
+            '09-26': { type: 'rest', label: 'Off' },
+            '09-27': { type: 'morning', label: '早更' },
+            '09-28': { type: 'morning', label: '早更' },
+            '09-29': { type: 'rest', label: 'Off' },
+            '09-30': { type: 'rest', label: 'Off' }
+        };
+
+        const NIGHT_START = 20;
+        const NIGHT_END = 7;
+
+        function getWeatherIcon(code) {
+            if (code === 0) return '☀️';
+            if (code <= 3) return '⛅';
+            if (code <= 48) return '☁️';
+            if (code <= 67 || code <= 82) return '🌧️';
+            if (code <= 99) return '⛈️';
+            return '⛅';
+        }
+
+        function initPhotos() {
+            const stage = document.getElementById('photoStage');
+            stage.innerHTML = '';
+            PHOTOS.forEach((src, i) => {
+                const img = document.createElement('img');
+                img.className = 'photo' + (i === 0 ? ' active' : '');
+                img.src = src;
+                img.alt = '';
+                stage.appendChild(img);
+            });
+        }
+        initPhotos();
+
+        let lastHour = -1;
+        function updateClock() {
+            const now = new Date();
+            let h = now.getHours();
+            const m = String(now.getMinutes()).padStart(2, '0');
+            h = h % 12 || 12;
+            document.getElementById('clockTime').textContent = `${String(h).padStart(2, '0')}:${m}`;
+
+            const year = now.getFullYear();
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            const day = String(now.getDate()).padStart(2, '0');
+            const weeks = ['星期日','星期一','星期二','星期三','星期四','星期五','星期六'];
+            document.getElementById('clockDate').textContent = `${year}年${month}月${day}日 ${weeks[now.getDay()]}`;
+
+            if (now.getMinutes() === 0 && now.getSeconds() === 0 && now.getHours() !== lastHour) {
+                lastHour = now.getHours();
+                chime();
+            }
+            checkNightMode();
+        }
+        updateClock();
+        setInterval(updateClock, 1000);
+
+        function checkNightMode() {
+            const hour = new Date().getHours();
+            if (hour >= NIGHT_START || hour < NIGHT_END) {
+                document.body.classList.add('night-mode');
+            } else {
+                document.body.classList.remove('night-mode');
+            }
+        }
+        checkNightMode();
+
+        function chime() {
+            const flash = document.getElementById('chimeFlash');
+            flash.classList.add('active');
+            try {
+                const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.frequency.value = 880;
+                gain.gain.setValueAtTime(0.1, ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.8);
+                osc.start();
+                osc.stop(ctx.currentTime + 0.8);
+            } catch(e) {}
+            setTimeout(() => flash.classList.remove('active'), 600);
+        }
+
+        function renderCalendar() {
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = now.getMonth();
+            const today = now.getDate();
+
+            document.getElementById('calMonth').textContent = `${year}年${month + 1}月`;
+
+            const firstDay = new Date(year, month, 1).getDay();
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+            const daysInPrev = new Date(year, month, 0).getDate();
+
+            let html = '';
+            const monthStr = String(month + 1).padStart(2, '0');
+
+            for (let i = firstDay - 1; i >= 0; i--) {
+                html += `<div class="cal-day other-month">${daysInPrev - i}</div>`;
+            }
+            
+            for (let d = 1; d <= daysInMonth; d++) {
+                const dayStr = String(d).padStart(2, '0');
+                const key = `${monthStr}-${dayStr}`;
+                const shift = SCHEDULE[key];
+                
+                let shiftHtml = '';
+                if (shift) {
+                    shiftHtml = `<div class="shift-label shift-${shift.type}">${shift.label}</div>`;
+                }
+
+                if (d === today) {
+                    html += `<div class="cal-day today">${d}${shiftHtml}</div>`;
+                } else {
+                    html += `<div class="cal-day">${d}${shiftHtml}</div>`;
+                }
+            }
+
+            const totalCells = firstDay + daysInMonth;
+            const remain = 42 - totalCells;
+            for (let i = 1; i <= remain; i++) {
+                html += `<div class="cal-day other-month">${i}</div>`;
+            }
+
+            document.getElementById('calDays').innerHTML = html;
+        }
+        renderCalendar();
+
+        let photoIndex = 0;
+        function nextPhoto() {
+            const photoEls = document.querySelectorAll('.photo');
+            if (photoEls.length === 0) return;
+            photoEls[photoIndex].classList.remove('active');
+            photoIndex = (photoIndex + 1) % photoEls.length;
+            photoEls[photoIndex].classList.add('active');
+        }
+        setInterval(nextPhoto, PHOTO_INTERVAL);
+
+        // 天氣：未來6天預報
+        async function fetchWeather() {
+            try {
+                const res = await fetch(WEATHER_API, { cache: 'no-store' });
+                if (!res.ok) throw new Error();
+                const data = await res.json();
+                const curr = data.current;
+                const daily = data.daily;
+
+                document.getElementById('weatherIcon').textContent = getWeatherIcon(curr.weather_code);
+                document.getElementById('weatherTemp').textContent = Math.round(curr.temperature_2m) + '°';
+                document.getElementById('weatherDesc').textContent =
+                    `氣溫 ${Math.round(daily.temperature_2m_min[0])}–${Math.round(daily.temperature_2m_max[0])}°`;
+
+                document.getElementById('tempHigh').textContent = Math.round(daily.temperature_2m_max[0]) + '°';
+                document.getElementById('tempLow').textContent = Math.round(daily.temperature_2m_min[0]) + '°';
+                document.getElementById('humidity').textContent = curr.relative_humidity_2m + '%';
+                document.getElementById('wind').textContent = Math.round(curr.wind_speed_10m) + ' km/h';
+                document.getElementById('uv').textContent = Math.round(curr.uv_index);
+                document.getElementById('feels').textContent = Math.round(curr.apparent_temperature) + '°';
+
+                // 未來6天預報：今日、明日 + 其後4天星期
+                let forecastHtml = '';
+                for (let i = 0; i < 6; i++) {
+                    const icon = getWeatherIcon(daily.weather_code[i]);
+                    const low = Math.round(daily.temperature_2m_min[i]);
+                    const high = Math.round(daily.temperature_2m_max[i]);
+                    
+                    let label;
+                    if (i === 0) label = '今日';
+                    else if (i === 1) label = '明日';
+                    else {
+                        const d = new Date(daily.time[i]);
+                        const dow = ['日','一','二','三','四','五','六'][d.getDay()];
+                        label = `週${dow}`;
+                    }
+
+                    forecastHtml += `
+                        <div class="forecast-day">
+                            <span class="day-name">${label}</span>
+                            <span class="day-icon">${icon}</span>
+                            <span class="day-temp">${low}° – ${high}°</span>
+                        </div>
+                    `;
+                }
+                document.getElementById('forecastDays').innerHTML = forecastHtml;
+
+                const now = new Date();
+                document.getElementById('weatherUpdate').textContent =
+                    `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')} 更新`;
+
+            } catch (e) {
+                document.getElementById('weatherDesc').textContent = '暫無法載入';
+            }
+        }
+        fetchWeather();
+        setInterval(fetchWeather, 30 * 60 * 1000);
+
+        // 倒數提醒：最近三個節日
+        function updateCountdown() {
+            const today = new Date();
+            today.setHours(0,0,0,0);
+            const list = document.getElementById('countdownList');
+            let upcoming = [];
+
+            for (const h of HOLIDAYS) {
+                const d = new Date(h.date);
+                d.setHours(0,0,0,0);
+                const diff = Math.ceil((d - today) / 86400000);
+                if (diff >= 0) {
+                    upcoming.push({ ...h, diff });
+                    if (upcoming.length >= 3) break;
+                }
+            }
+
+            if (upcoming.length > 0) {
+                list.innerHTML = upcoming.map(h => `
+                    <div class="countdown-item">
+                        <span>${h.name}</span>
+                        <span class="countdown-days">${h.diff} 日</span>
+                    </div>
+                `).join('');
+            } else {
+                list.innerHTML = `<div class="countdown-item" style="opacity:0.6">暫無即將到來節日</div>`;
+            }
+        }
+        updateCountdown();
+
+        async function requestWakeLock() {
+            if ('wakeLock' in navigator) {
+                try {
+                    await navigator.wakeLock.request('screen');
+                } catch (e) {}
+            }
+        }
+        requestWakeLock();
+        document.addEventListener('visibilitychange', () => {
+            if (!document.hidden) requestWakeLock();
+        });
+
+        setInterval(() => {
+            const x = (Math.random() - 0.5) * 2;
+            const y = (Math.random() - 0.5) * 2;
+            document.querySelectorAll('.burn-in-protect').forEach(el => {
+                el.style.transform = `translate(${x}px, ${y}px)`;
+            });
+        }, 5 * 60 * 1000);
+
+        document.body.addEventListener('click', () => {
+            document.getElementById('mainContainer').classList.toggle('hidden');
+        });
+    </script>
+</body>
+</html>
