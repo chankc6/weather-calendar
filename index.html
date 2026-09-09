@@ -246,11 +246,15 @@
             gap: 2px;
             line-height: 1.2;
         }
+        /* 今日高亮：跟隨班次顏色 */
         .cal-day.today {
-            background: #ffd166;
             color: #333;
             font-weight: 600;
         }
+        .cal-day.today-morning { background: #ffd166; }
+        .cal-day.today-night { background: #c4b5fd; }
+        .cal-day.today-rest { background: #ff8080; }
+
         .cal-day.other-month {
             opacity: 0.3;
         }
@@ -301,7 +305,7 @@
     <div class="main-container burn-in-protect" id="mainContainer">
         <div class="time-layer">
             <div class="time-big" id="clockTime">00:00</div>
-            <div class="date-row" id="clockDate">2026年09月08日 星期二</div>
+            <div class="date-row" id="clockDate">2026年09月09日 星期三</div>
             <div class="lunar-row" id="clockLunar">丙午馬年 七月廿七日</div>
         </div>
 
@@ -518,7 +522,12 @@
                 }
 
                 if (d === today) {
-                    html += `<div class="cal-day today">${d}${shiftHtml}</div>`;
+                    // 今日高亮顏色跟隨班次
+                    let todayClass = 'today';
+                    if (shift) {
+                        todayClass += ` today-${shift.type}`;
+                    }
+                    html += `<div class="cal-day ${todayClass}">${d}${shiftHtml}</div>`;
                 } else {
                     html += `<div class="cal-day">${d}${shiftHtml}</div>`;
                 }
