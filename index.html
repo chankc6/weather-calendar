@@ -2,7 +2,7 @@
 <html lang="zh-Hant">
 <head>
     <meta charset="UTF-8">
-    <!-- 每15分鐘自動刷新整個頁面（900秒） -->
+    <!-- 每15分鐘自動刷新整個頁面 -->
     <meta http-equiv="refresh" content="900">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="mobile-web-app-capable" content="yes">
@@ -206,7 +206,7 @@
             color: #ffd166;
         }
 
-        /* 月曆（整合更表） */
+        /* 月曆 */
         .calendar-card {
             background: rgba(0,0,0,0.35);
             backdrop-filter: blur(14px);
@@ -239,37 +239,17 @@
             font-size: 12px;
         }
         .cal-day {
-            padding: 4px 2px;
+            padding: 5px 0;
             border-radius: 7px;
-            display: flex;
-            flex-direction: column;
-            gap: 2px;
             line-height: 1.2;
         }
-        /* 今日高亮：跟隨班次顏色 */
         .cal-day.today {
+            background: #ffd166;
             color: #333;
             font-weight: 600;
         }
-        .cal-day.today-morning { background: #ffd166; }
-        .cal-day.today-night { background: #c4b5fd; }
-        .cal-day.today-rest { background: #ff8080; }
-
         .cal-day.other-month {
             opacity: 0.3;
-        }
-        .shift-label {
-            font-size: 9px;
-            font-weight: 500;
-            line-height: 1.1;
-        }
-        .shift-morning { color: #ffd166; }
-        .shift-night { color: #c4b5fd; }
-        .shift-rest { color: #ff8080; }
-        .cal-day.today .shift-morning,
-        .cal-day.today .shift-night,
-        .cal-day.today .shift-rest {
-            color: #333;
         }
 
         .chime-flash {
@@ -305,7 +285,7 @@
     <div class="main-container burn-in-protect" id="mainContainer">
         <div class="time-layer">
             <div class="time-big" id="clockTime">00:00</div>
-            <div class="date-row" id="clockDate">2026年09月09日 星期三</div>
+            <div class="date-row" id="clockDate">2026年10月05日 星期一</div>
             <div class="lunar-row" id="clockLunar">丙午馬年 七月廿七日</div>
         </div>
 
@@ -340,10 +320,10 @@
                 <div id="countdownList"></div>
             </div>
 
-            <!-- 月曆（內嵌更表） -->
+            <!-- 月曆 -->
             <div class="calendar-card">
                 <div class="cal-header">
-                    <span id="calMonth">2026年9月</span>
+                    <span id="calMonth">2026年10月</span>
                     <span style="font-size:11px;opacity:0.7">今日高亮</span>
                 </div>
                 <div class="cal-weekdays">
@@ -372,49 +352,12 @@
         const PHOTO_INTERVAL = 15000;
 
         const HOLIDAYS = [
-            { date: '2026-09-26', name: '中秋節翌日' },
-            { date: '2026-10-01', name: '國慶日' },
-            { date: '2026-10-02', name: '國慶日翌日' },
             { date: '2026-10-18', name: '重陽節' },
             { date: '2026-12-20', name: '澳門回歸日' },
             { date: '2026-12-22', name: '冬至' },
             { date: '2026-12-25', name: '聖誕節' },
             { date: '2027-01-01', name: '元旦' }
         ];
-
-        // 9月完整更表
-        const SCHEDULE = {
-            '09-01': { type: 'rest', label: 'Off' },
-            '09-02': { type: 'morning', label: '早更' },
-            '09-03': { type: 'night', label: '夜更' },
-            '09-04': { type: 'rest', label: 'Off' },
-            '09-05': { type: 'morning', label: '早更' },
-            '09-06': { type: 'night', label: '夜更' },
-            '09-07': { type: 'rest', label: 'Off' },
-            '09-08': { type: 'morning', label: '早更' },
-            '09-09': { type: 'night', label: '夜更' },
-            '09-10': { type: 'night', label: '夜更' },
-            '09-11': { type: 'night', label: '夜更' },
-            '09-12': { type: 'rest', label: 'Off' },
-            '09-13': { type: 'morning', label: '早更' },
-            '09-14': { type: 'morning', label: '早更' },
-            '09-15': { type: 'morning', label: '早更' },
-            '09-16': { type: 'rest', label: 'Off' },
-            '09-17': { type: 'morning', label: '早更' },
-            '09-18': { type: 'night', label: '夜更' },
-            '09-19': { type: 'night', label: '夜更' },
-            '09-20': { type: 'rest', label: 'Off' },
-            '09-21': { type: 'night', label: '夜更' },
-            '09-22': { type: 'night', label: '夜更' },
-            '09-23': { type: 'night', label: '夜更' },
-            '09-24': { type: 'night', label: '夜更' },
-            '09-25': { type: 'rest', label: 'Off' },
-            '09-26': { type: 'rest', label: 'Off' },
-            '09-27': { type: 'morning', label: '早更' },
-            '09-28': { type: 'morning', label: '早更' },
-            '09-29': { type: 'rest', label: 'Off' },
-            '09-30': { type: 'rest', label: 'Off' }
-        };
 
         const NIGHT_START = 20;
         const NIGHT_END = 7;
@@ -477,18 +420,6 @@
         function chime() {
             const flash = document.getElementById('chimeFlash');
             flash.classList.add('active');
-            try {
-                const ctx = new (window.AudioContext || window.webkitAudioContext)();
-                const osc = ctx.createOscillator();
-                const gain = ctx.createGain();
-                osc.connect(gain);
-                gain.connect(ctx.destination);
-                osc.frequency.value = 880;
-                gain.gain.setValueAtTime(0.1, ctx.currentTime);
-                gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.8);
-                osc.start();
-                osc.stop(ctx.currentTime + 0.8);
-            } catch(e) {}
             setTimeout(() => flash.classList.remove('active'), 600);
         }
 
@@ -505,34 +436,22 @@
             const daysInPrev = new Date(year, month, 0).getDate();
 
             let html = '';
-            const monthStr = String(month + 1).padStart(2, '0');
 
+            // 上月補位
             for (let i = firstDay - 1; i >= 0; i--) {
                 html += `<div class="cal-day other-month">${daysInPrev - i}</div>`;
             }
             
+            // 本月日期
             for (let d = 1; d <= daysInMonth; d++) {
-                const dayStr = String(d).padStart(2, '0');
-                const key = `${monthStr}-${dayStr}`;
-                const shift = SCHEDULE[key];
-                
-                let shiftHtml = '';
-                if (shift) {
-                    shiftHtml = `<div class="shift-label shift-${shift.type}">${shift.label}</div>`;
-                }
-
                 if (d === today) {
-                    // 今日高亮顏色跟隨班次
-                    let todayClass = 'today';
-                    if (shift) {
-                        todayClass += ` today-${shift.type}`;
-                    }
-                    html += `<div class="cal-day ${todayClass}">${d}${shiftHtml}</div>`;
+                    html += `<div class="cal-day today">${d}</div>`;
                 } else {
-                    html += `<div class="cal-day">${d}${shiftHtml}</div>`;
+                    html += `<div class="cal-day">${d}</div>`;
                 }
             }
 
+            // 下月補位
             const totalCells = firstDay + daysInMonth;
             const remain = 42 - totalCells;
             for (let i = 1; i <= remain; i++) {
@@ -574,7 +493,7 @@
                 document.getElementById('uv').textContent = Math.round(curr.uv_index);
                 document.getElementById('feels').textContent = Math.round(curr.apparent_temperature) + '°';
 
-                // 未來4天預報：今日、明日 + 其後2天星期
+                // 未來4天預報
                 let forecastHtml = '';
                 for (let i = 0; i < 4; i++) {
                     const icon = getWeatherIcon(daily.weather_code[i]);
