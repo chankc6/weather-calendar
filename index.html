@@ -206,7 +206,7 @@
             color: #ffd166;
         }
 
-        /* 月曆（整合更表） */
+        /* 月曆 */
         .calendar-card {
             background: rgba(0,0,0,0.35);
             backdrop-filter: blur(14px);
@@ -239,37 +239,17 @@
             font-size: 12px;
         }
         .cal-day {
-            padding: 4px 2px;
+            padding: 5px 0;
             border-radius: 7px;
-            display: flex;
-            flex-direction: column;
-            gap: 2px;
             line-height: 1.2;
         }
-        /* 今日高亮：跟隨班次顏色 */
         .cal-day.today {
+            background: #ffd166;
             color: #333;
             font-weight: 600;
         }
-        .cal-day.today-morning { background: #ffd166; }
-        .cal-day.today-night { background: #c4b5fd; }
-        .cal-day.today-rest { background: #ff8080; }
-
         .cal-day.other-month {
             opacity: 0.3;
-        }
-        .shift-label {
-            font-size: 9px;
-            font-weight: 500;
-            line-height: 1.1;
-        }
-        .shift-morning { color: #ffd166; }
-        .shift-night { color: #c4b5fd; }
-        .shift-rest { color: #ff8080; }
-        .cal-day.today .shift-morning,
-        .cal-day.today .shift-night,
-        .cal-day.today .shift-rest {
-            color: #333;
         }
 
         .chime-flash {
@@ -340,7 +320,7 @@
                 <div id="countdownList"></div>
             </div>
 
-            <!-- 月曆（內嵌更表） -->
+            <!-- 月曆 -->
             <div class="calendar-card">
                 <div class="cal-header">
                     <span id="calMonth">2026年9月</span>
@@ -381,40 +361,6 @@
             { date: '2026-12-25', name: '聖誕節' },
             { date: '2027-01-01', name: '元旦' }
         ];
-
-        // 9月完整更表
-        const SCHEDULE = {
-            '09-01': { type: 'rest', label: 'Off' },
-            '09-02': { type: 'morning', label: '早更' },
-            '09-03': { type: 'night', label: '夜更' },
-            '09-04': { type: 'rest', label: 'Off' },
-            '09-05': { type: 'morning', label: '早更' },
-            '09-06': { type: 'night', label: '夜更' },
-            '09-07': { type: 'rest', label: 'Off' },
-            '09-08': { type: 'morning', label: '早更' },
-            '09-09': { type: 'night', label: '夜更' },
-            '09-10': { type: 'night', label: '夜更' },
-            '09-11': { type: 'night', label: '夜更' },
-            '09-12': { type: 'rest', label: 'Off' },
-            '09-13': { type: 'morning', label: '早更' },
-            '09-14': { type: 'morning', label: '早更' },
-            '09-15': { type: 'morning', label: '早更' },
-            '09-16': { type: 'rest', label: 'Off' },
-            '09-17': { type: 'morning', label: '早更' },
-            '09-18': { type: 'night', label: '夜更' },
-            '09-19': { type: 'night', label: '夜更' },
-            '09-20': { type: 'rest', label: 'Off' },
-            '09-21': { type: 'night', label: '夜更' },
-            '09-22': { type: 'night', label: '夜更' },
-            '09-23': { type: 'night', label: '夜更' },
-            '09-24': { type: 'night', label: '夜更' },
-            '09-25': { type: 'rest', label: 'Off' },
-            '09-26': { type: 'rest', label: 'Off' },
-            '09-27': { type: 'morning', label: '早更' },
-            '09-28': { type: 'morning', label: '早更' },
-            '09-29': { type: 'rest', label: 'Off' },
-            '09-30': { type: 'rest', label: 'Off' }
-        };
 
         const NIGHT_START = 20;
         const NIGHT_END = 7;
@@ -505,34 +451,22 @@
             const daysInPrev = new Date(year, month, 0).getDate();
 
             let html = '';
-            const monthStr = String(month + 1).padStart(2, '0');
 
+            // 上月補位
             for (let i = firstDay - 1; i >= 0; i--) {
                 html += `<div class="cal-day other-month">${daysInPrev - i}</div>`;
             }
             
+            // 本月日期
             for (let d = 1; d <= daysInMonth; d++) {
-                const dayStr = String(d).padStart(2, '0');
-                const key = `${monthStr}-${dayStr}`;
-                const shift = SCHEDULE[key];
-                
-                let shiftHtml = '';
-                if (shift) {
-                    shiftHtml = `<div class="shift-label shift-${shift.type}">${shift.label}</div>`;
-                }
-
                 if (d === today) {
-                    // 今日高亮顏色跟隨班次
-                    let todayClass = 'today';
-                    if (shift) {
-                        todayClass += ` today-${shift.type}`;
-                    }
-                    html += `<div class="cal-day ${todayClass}">${d}${shiftHtml}</div>`;
+                    html += `<div class="cal-day today">${d}</div>`;
                 } else {
-                    html += `<div class="cal-day">${d}${shiftHtml}</div>`;
+                    html += `<div class="cal-day">${d}</div>`;
                 }
             }
 
+            // 下月補位
             const totalCells = firstDay + daysInMonth;
             const remain = 42 - totalCells;
             for (let i = 1; i <= remain; i++) {
